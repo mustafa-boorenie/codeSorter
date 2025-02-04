@@ -1,16 +1,14 @@
+import os                
 import pandas as pd
 import openai
 from dotenv import load_dotenv  # Added python-dotenv import
 
-# --- Configuration ---
-input_file = './data/codesTable.csv'      # Path to your Excel file
-output_file = './output/output.csv'    # Path for the updated Excel file
-load_dotenv() # loads dotenv files
+load_dotenv()  # loads .env file
 
 # Load the OpenAI API key from an environment variable.
 openai.api_key = os.getenv("API_KEY")
 if openai.api_key is None:
-    raise ValueError("Please set the OPENAI_API_KEY environment variable with your OpenAI API key.")
+    raise ValueError("Please set the API_KEY environment variable with your OpenAI API key.")
 
 # Allowed categories for verification
 ALLOWED_CATEGORIES = {
@@ -18,25 +16,13 @@ ALLOWED_CATEGORIES = {
     "Imaging",
     "Specialised treatment",
     "Labs",
-    "Surgical Procedures",
+    "Hospital Procedures",
     "Infusions",
-    "Non-surgical Procedures",
+    "In-office Procedures",
     "Specialized Services",
     "Specialized Investigations",
     "General testing"
 }
-
-# --- Read the Excel File ---
-try:
-    df = pd.read_excel(input_file, engine='openpyxl')
-except Exception as e:
-    print(f"Error reading {input_file}: {e}")
-    exit(1)
-
-# Check that the expected first column exists; here we assume it's named "Item"
-if 'Item' not in df.columns:
-    print("The expected column 'Item' was not found in the Excel file.")
-    exit(1)
 
 # --- Define the Logic for Category Assignment Using OpenAI ---
 def assign_category(item):
@@ -79,13 +65,31 @@ def assign_category(item):
         print(f"Error categorizing code '{item_str}': {e}")
         return "Error"
 
-# --- Apply the Function to Create a New Column ---
-# This creates (or replaces) a column called 'Category' based on the 'Item' column.
+# --- Configuration ---
+input_file = './data/codesTable.csv'      # Path to your CSV file
+output_file = './output/output.csv'         # Path for the updated output file
+
+# --- Read the CSV File ---
+try:
+    df = pd.read_csv(input_file)  # Changed from read_excel to read_csv
+except Exception as e:
+    print(f"Error reading {input_file}: {e}")
+    exit(1)
+
+# Check that the expected column exists; here we expect it's named "CPT_Code"
+if 'CPT_Code' not in df.columns:
+    print("The expected column 'CPT_Code' was not found in the CSV file.")
+    exit(1)
+
+# Rename 'CPT_Code' to 'Item' so we can use it with our function
+df.rename(columns={'CPT_Code': 'Item'}, inplace=True)
+
+# Now you can safely use 'Item'
 df['Category'] = df['Item'].apply(assign_category)
 
-# --- Write the Updated DataFrame Back to Excel ---
+# --- Write the Updated DataFrame Back to CSV ---
 try:
-    df.to_excel(output_file, index=False, engine='openpyxl')
-    print(f"Updated Excel file saved to {output_file}")
+    df.to_csv(output_file, index=False)  # Writing output as CSV
+    print(f"Updated file saved to {output_file}")
 except Exception as e:
     print(f"Error writing to {output_file}: {e}")
