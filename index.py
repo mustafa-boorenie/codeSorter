@@ -16,12 +16,13 @@ ALLOWED_CATEGORIES = {
     "Imaging",
     "Specialised treatment",
     "Labs",
-    "Hospital Procedures",
+    "Surgical Procedures",
     "Infusions",
-    "In-office Procedures",
+    "Non-surgical Procedures",
     "Specialized Services",
     "Specialized Investigations",
-    "General testing"
+    "General testing",
+    "Sleep Medicine Services"
 }
 
 # --- Define the Logic for Category Assignment Using OpenAI ---
@@ -39,7 +40,7 @@ def assign_category(item):
         f"Categorize the following CPT/E&M code into one of these categories:\n"
         "Visits, Imaging, Specialised treatment, Labs, Surgical Procedures, Infusions, "
         "Non-surgical Procedures, Specialized Services, Specialized Investigations, General testing.\n"
-        "Only provide the category name as your response.\n\n"
+        "Only provide the category name as your response. Do not use external categories. \n\n"
         f"Code: {item_str}"
     )
     
@@ -47,7 +48,7 @@ def assign_category(item):
         response = openai.ChatCompletion.create(
             model="gpt-4",  # Using the newer GPT-4 model
             messages=[
-                {"role": "system", "content": "You are an assistant that categorizes medical procedure codes."},
+                {"role": "system", "content": "You are an certified coder that categorizes medical procedure codes for review by staff."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.0,
@@ -59,7 +60,7 @@ def assign_category(item):
         if category not in ALLOWED_CATEGORIES:
             # Optionally, log unexpected responses
             print(f"Warning: Received unexpected category '{category}' for code '{item_str}'.")
-            return "Other"
+            return category
         return category
     except Exception as e:
         print(f"Error categorizing code '{item_str}': {e}")
@@ -81,11 +82,8 @@ if 'CPT_Code' not in df.columns:
     print("The expected column 'CPT_Code' was not found in the CSV file.")
     exit(1)
 
-# Rename 'CPT_Code' to 'Item' so we can use it with our function
-df.rename(columns={'CPT_Code': 'Item'}, inplace=True)
-
-# Now you can safely use 'Item'
-df['Category'] = df['Item'].apply(assign_category)
+# Now you can safely use 'CPT_Code' column
+df['Category'] = df['CPT_Code'].apply(assign_category)
 
 # --- Write the Updated DataFrame Back to CSV ---
 try:
